@@ -43,7 +43,7 @@ session=abc123xyz; token=def456uvw; user_id=12345
 | 变量名 | 必填 | 说明 |
 |--------|------|------|
 | `NS_COOKIE` | ✅ | NodeSeek Cookie，多账号用 `\|` 分隔 |
-| `NS_RANDOM` | ❌ | `true`: 试试手气 / `false`: 鸡腿 x 5 |
+| `NS_RANDOM` | ❌ | `true`: 试试手气 / `false`: 鸡腿 x 5  默认`true` |
 | `NS_COMMENT_URL` | ❌ | 评论区域 URL（默认交易区） |
 | `TG_BOT_TOKEN` | ❌ | Telegram Bot Token |
 | `TG_CHAT_ID` | ❌ | Telegram Chat ID |
