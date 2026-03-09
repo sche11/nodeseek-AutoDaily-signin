@@ -445,11 +445,27 @@ def setup_driver_and_cookies(cookie_str):
             print("使用 xvfb 虚拟显示器模式 (非 headless)，可绕过 Cloudflare 检测")
         
         print("正在启动Chrome (undetected-chromedriver)...")
+        # 自动检测已安装的 Chrome 主版本号，避免 ChromeDriver 版本不匹配
+        chrome_major_version = None
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['google-chrome', '--version'],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0:
+                version_str = result.stdout.strip().split()[-1]
+                chrome_major_version = int(version_str.split('.')[0])
+                print(f"检测到 Chrome 版本: {version_str} (主版本: {chrome_major_version})")
+        except Exception as e:
+            print(f"Chrome 版本检测失败: {e}，使用 UC 默认版本")
+        
         # UC 自动处理 ChromeDriver 下载、反检测补丁、webdriver 标记移除
         driver = uc.Chrome(
             options=chrome_options,
             headless=use_headless,
-            use_subprocess=True
+            use_subprocess=True,
+            version_main=chrome_major_version
         )
         
         driver.set_window_size(1920, 1080)
