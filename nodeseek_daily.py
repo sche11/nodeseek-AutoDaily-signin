@@ -38,6 +38,10 @@ class Config:
         self.tg_bot_token = os.environ.get("TG_BOT_TOKEN")
         self.tg_chat_id = os.environ.get("TG_CHAT_ID")
         
+        # 评论功能开关（默认开启，设置 NS_COMMENT=false 可关闭）
+        ns_comment_env = os.environ.get("NS_COMMENT", "")
+        self.enable_comment = (ns_comment_env.lower() != "false") if ns_comment_env else True
+        
         # 评论区域配置（处理空字符串）
         comment_url_env = os.environ.get("NS_COMMENT_URL", "") or ""
         self.comment_url = comment_url_env.strip() if comment_url_env.strip() else "https://www.nodeseek.com/categories/trade"
@@ -672,8 +676,11 @@ def run_for_account(cookie_str, account_index):
         result["sign_in"] = status
         result["reward"] = reward
         
-        # 执行评论任务
-        result["comments"] = nodeseek_comment(driver)
+        # 执行评论任务（可通过 NS_COMMENT=true 开启）
+        if config.enable_comment:
+            result["comments"] = nodeseek_comment(driver)
+        else:
+            print("评论功能已关闭 (NS_COMMENT 未设置或不为 true)")
         
     finally:
         try:
