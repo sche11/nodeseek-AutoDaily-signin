@@ -9,7 +9,7 @@
 - 👥 **多账号支持**（Cookie 用 `|` 分隔）
 - 🎯 **可配置评论区域**
 - ⏰ **随机延迟执行**（0-10 分钟，防止固定时间触发）
-- 📱 Telegram 极简科技风通知
+- 📱 企业微信应用通知
 - 🔄 失败自动重试 + 智能容错
 - 🔐 Cookie 过期检测告警
 
@@ -18,8 +18,8 @@
 1. Fork 本仓库
 2. 在 `Settings → Secrets and variables → Actions` 中添加配置
 3. Actions 将每天自动执行两次：
-   - **北京时间 00:10**（签到 + 评论）
-   - **北京时间 12:20**（签到 + 评论）
+   - **北京时间 07:10**（签到 + 评论）
+   - **北京时间 16:20**（签到 + 评论）
 
 ## 🍪 如何获取 NodeSeek Cookie
 
@@ -47,8 +47,7 @@ session=abc123xyz; token=def456uvw; user_id=12345
 | `NS_COOKIE` | ✅ | NodeSeek Cookie，多账号用 `\|` 分隔 |
 | `NS_RANDOM` | ❌ | `true`(默认): 试试手气 / `false`: 鸡腿 x 5 |
 | `NS_COMMENT_URL` | ❌ | 评论区域 URL（默认交易区） |
-| `TG_BOT_TOKEN` | ❌ | Telegram Bot Token |
-| `TG_CHAT_ID` | ❌ | Telegram Chat ID |
+| `QYWX_AM` | ❌ | 企业微信应用通知，格式：`corpid,corpsecret,to_user,agentid` |
 | `NS_COMMENT` | ❌ | `true`(默认),关闭评论功能则改为false |
 
 ### Variables（非敏感配置）
@@ -98,7 +97,7 @@ NodeSeek 每日简报
 ## ❓ 常见问题
 
 **Q: Cookie 多久过期？**  
-A: 一般 7-30 天，过期后会收到 Telegram 告警通知。
+A: 一般 7-30 天，过期后会收到企业微信告警通知。
 
 **Q: 如何手动运行测试？**  
 A: 进入 Actions 页面，选择 workflow，点击 "Run workflow"。
