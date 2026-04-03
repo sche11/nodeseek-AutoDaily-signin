@@ -3,10 +3,10 @@ name: NodeSeek 自动签到
 on:
   workflow_dispatch:  # 支持手动触发
   schedule:
-    # 每天北京时间 0:10 (UTC 16:10)
-    - cron: '10 16 * * *'
-    # 每天北京时间 12:20 (UTC 4:20)
-    - cron: '20 4 * * *'
+    # 每天北京时间 7:10 (UTC 23:10)
+    - cron: '10 23 * * *'
+    # 每天北京时间 16:20 (UTC 8:20)
+    - cron: '20 8 * * *'
 
 jobs:
   run-nodeseek-daily:
@@ -52,8 +52,7 @@ jobs:
           NS_COMMENT_URL: ${{ secrets.NS_COMMENT_URL }}
           NS_DELAY_MIN: ${{ vars.NS_DELAY_MIN }}
           NS_DELAY_MAX: ${{ vars.NS_DELAY_MAX }}
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          QYWX_AM: ${{ secrets.QYWX_AM }}
           HEADLESS: "false"
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python nodeseek_daily.py
