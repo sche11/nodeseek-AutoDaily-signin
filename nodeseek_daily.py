@@ -796,7 +796,7 @@ if __name__ == "__main__":
                 sign_result = "今日已签"
             else:
                 sign_status = "❌ 失败"
-                sign_result = "签到失败"
+                sign_result = "签到失败，请前往手动重试https://github.com/sche11/nodeseek-AutoDaily-signin/actions"
                 
             report_message = f"""NodeSeek 每日简报
 ━━━━━━━━━━━━━━━
