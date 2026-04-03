@@ -34,9 +34,9 @@ class Config:
         self.ns_random = (ns_random_env.lower() == "true") if ns_random_env else True
         self.headless = os.environ.get("HEADLESS", "true").lower() == "true"
         
-        # Telegram 通知配置
-        self.tg_bot_token = os.environ.get("TG_BOT_TOKEN")
-        self.tg_chat_id = os.environ.get("TG_CHAT_ID")
+        # 企业微信通知配置（格式：corpid,corpsecret,to_user,agentid）
+        qywcom_am = os.environ.get("QYWX_AM", "")
+        self.qywcom_am = [p.strip() for p in qywcom_am.split(",") if p.strip()] if qywcom_am else []
         
         # 评论功能开关（默认开启，设置 NS_COMMENT=false 可关闭）
         ns_comment_env = os.environ.get("NS_COMMENT", "")
@@ -73,57 +73,109 @@ config = Config()
 # 随机评论内容
 randomInputStr = ["bd","绑定","帮顶","吃瓜吃瓜","好价","过来看一下","喝杯奶茶压压惊","咕噜咕噜","前排","悄悄地我来了悄悄地又走了","恭喜发财","好基","公道公道","楼主不错 绑定","还可以","再看看吧","楼下要了","挺不错的 bdbd","好价 好价","给楼下点个","祝早出","观望一下 早出","让给楼下","bd 可惜用不上 楼下来秒了","还要啥自行车","卷起来","就是这个feel","这是什么东西","吗喽~~~","收了吧楼下","bd一下","bd"]
 
-def send_telegram_message(message):
+def send_enterprise_wechat_message(message):
     """
-    发送 Telegram 消息通知
-    如果未配置 TG_BOT_TOKEN 或 TG_CHAT_ID，则静默跳过
+    发送企业微信应用消息通知
+    如果未配置 QYWX_AM，则静默跳过
     """
-    if not config.tg_bot_token or not config.tg_chat_id:
-        print("未配置 Telegram 通知，跳过发送")
-        return False
-    
-    try:
-        url = f"https://api.telegram.org/bot{config.tg_bot_token}/sendMessage"
-        payload = {
-            "chat_id": config.tg_chat_id,
-            "text": message,
-            "parse_mode": "HTML"
-        }
-        response = requests.post(url, json=payload, timeout=10)
-        if response.status_code == 200:
-            print("Telegram 通知发送成功")
-            return True
-        else:
-            print(f"Telegram 通知发送失败: {response.text}")
-            return False
-    except Exception as e:
-        print(f"Telegram 通知发送出错: {str(e)}")
+    if not config.qywcom_am or len(config.qywcom_am) < 4:
+        print("未配置企业微信通知，跳过发送")
         return False
 
-def send_telegram_photo(photo_path, caption=None):
-    """
-    发送图片到 Telegram
-    """
-    if not config.tg_bot_token or not config.tg_chat_id:
-        return False
-        
     try:
-        url = f"https://api.telegram.org/bot{config.tg_bot_token}/sendPhoto"
-        with open(photo_path, 'rb') as photo:
-            payload = {'chat_id': config.tg_chat_id}
-            if caption:
-                payload['caption'] = caption
-            files = {'photo': photo}
-            response = requests.post(url, data=payload, files=files, timeout=20)
-            
-        if response.status_code == 200:
-            print("Telegram 图片发送成功")
+        corpid, corpsecret, to_user, agentid = config.qywcom_am[0], config.qywcom_am[1], config.qywcom_am[2], config.qywcom_am[3]
+
+        # 获取 access_token
+        token_url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={corpid}&corpsecret={corpsecret}"
+        token_response = requests.get(token_url, timeout=10)
+        token_data = token_response.json()
+
+        if token_data.get("errcode") != 0:
+            print(f"获取企业微信 access_token 失败: {token_data}")
+            return False
+
+        access_token = token_data.get("access_token")
+
+        # 发送消息
+        send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
+        payload = {
+            "touser": to_user,
+            "msgtype": "text",
+            "agentid": agentid,
+            "text": {
+                "content": message
+            }
+        }
+        response = requests.post(send_url, json=payload, timeout=10)
+        result = response.json()
+
+        if result.get("errcode") == 0:
+            print("企业微信通知发送成功")
             return True
         else:
-            print(f"Telegram 图片发送失败: {response.text}")
+            print(f"企业微信通知发送失败: {result}")
             return False
     except Exception as e:
-        print(f"Telegram 图片发送出错: {str(e)}")
+        print(f"企业微信通知发送出错: {str(e)}")
+        return False
+
+
+def send_enterprise_wechat_photo(photo_path, caption=None):
+    """
+    发送图片到企业微信应用（通过素材接口）
+    """
+    if not config.qywcom_am or len(config.qywcom_am) < 4:
+        return False
+
+    try:
+        corpid, corpsecret, to_user, agentid = config.qywcom_am[0], config.qywcom_am[1], config.qywcom_am[2], config.qywcom_am[3]
+
+        # 获取 access_token
+        token_url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={corpid}&corpsecret={corpsecret}"
+        token_response = requests.get(token_url, timeout=10)
+        token_data = token_response.json()
+
+        if token_data.get("errcode") != 0:
+            print(f"获取企业微信 access_token 失败: {token_data}")
+            return False
+
+        access_token = token_data.get("access_token")
+
+        # 上传图片获取 media_id
+        upload_url = f"https://qyapi.weixin.qq.com/cgi-bin/media/upload?access_token={access_token}&type=image"
+        with open(photo_path, 'rb') as photo:
+            files = {'media': (photo_path, photo, 'image/png')}
+            upload_response = requests.post(upload_url, files=files, timeout=20)
+
+        upload_result = upload_response.json()
+
+        if upload_result.get("errcode") != 0:
+            print(f"上传图片到企业微信失败: {upload_result}")
+            return False
+
+        media_id = upload_result.get("media_id")
+
+        # 发送图片消息
+        send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
+        payload = {
+            "touser": to_user,
+            "msgtype": "image",
+            "agentid": agentid,
+            "image": {
+                "media_id": media_id
+            }
+        }
+        response = requests.post(send_url, json=payload, timeout=10)
+        result = response.json()
+
+        if result.get("errcode") == 0:
+            print("企业微信图片发送成功")
+            return True
+        else:
+            print(f"企业微信图片发送失败: {result}")
+            return False
+    except Exception as e:
+        print(f"企业微信图片发送出错: {str(e)}")
         return False
 
 def retry(max_attempts=3, delay=5):
@@ -179,7 +231,7 @@ def check_login_status(driver):
             if not _wait_for_cloudflare(driver):
                 try:
                     driver.save_screenshot("cf_login_check.png")
-                    send_telegram_photo("cf_login_check.png", caption="Cloudflare 拦截导致登录检测失败")
+                    send_enterprise_wechat_photo("cf_login_check.png", caption="Cloudflare 拦截导致登录检测失败")
                 except:
                     pass
                 return False
@@ -207,7 +259,7 @@ def check_login_status(driver):
                 driver.save_screenshot("login_check_failed.png")
                 page_text = driver.find_element(By.TAG_NAME, "body").text[:500]
                 print(f"页面前500字: {page_text}")
-                send_telegram_photo("login_check_failed.png", caption=f"登录检测失败\n标题: {page_title}")
+                send_enterprise_wechat_photo("login_check_failed.png", caption=f"登录检测失败\n标题: {page_title}")
             except:
                 pass
             return False
@@ -269,7 +321,7 @@ def click_sign_icon(driver):
         if "Just a moment" in driver.title or "Attention Required" in driver.title:
             print("❌ 检测到 Cloudflare 拦截")
             driver.save_screenshot("cf_block_sign.png")
-            send_telegram_photo("cf_block_sign.png", caption="❌ 签到时遭遇 Cloudflare 拦截")
+            send_enterprise_wechat_photo("cf_block_sign.png", caption="❌ 签到时遭遇 Cloudflare 拦截")
             return "failed", "Cloudflare 拦截"
             
         # 1. 检查是否被重定向回首页
@@ -407,7 +459,7 @@ def click_sign_icon(driver):
             print("❌ 无法确认签到状态")
             screenshot_path = "sign_intro_error.png"
             driver.save_screenshot(screenshot_path)
-            send_telegram_photo(screenshot_path, caption=f"❌ 签到状态未知\nURL: {current_url}")
+            send_enterprise_wechat_photo(screenshot_path, caption=f"❌ 签到状态未知\nURL: {current_url}")
             return "failed", "状态未知"
             
     except Exception as e:
@@ -415,7 +467,7 @@ def click_sign_icon(driver):
         traceback.print_exc()
         try:
             driver.save_screenshot("sign_exception.png")
-            send_telegram_photo("sign_exception.png", caption=f"❌ 签到异常: {str(e)}")
+            send_enterprise_wechat_photo("sign_exception.png", caption=f"❌ 签到异常: {str(e)}")
         except:
             pass
         return "failed", f"异常: {str(e)}"
@@ -616,7 +668,7 @@ def nodeseek_comment(driver):
                     print(f"已保存错误截图: {screenshot_path}")
                     # 只发送第一张评论错误截图，避免刷屏
                     if i == 0:
-                        send_telegram_photo(screenshot_path, caption=f"❌ 评论失败截图\n帖子: {post_url}\n错误: {str(e)}")
+                        send_enterprise_wechat_photo(screenshot_path, caption=f"❌ 评论失败截图\n帖子: {post_url}\n错误: {str(e)}")
                 except:
                     pass
                 
@@ -639,7 +691,7 @@ def nodeseek_comment(driver):
         try:
             screenshot_path = "comment_main_error.png"
             driver.save_screenshot(screenshot_path)
-            send_telegram_photo(screenshot_path, caption=f"❌ 评论任务致命错误\n错误: {str(e)}")
+            send_enterprise_wechat_photo(screenshot_path, caption=f"❌ 评论任务致命错误\n错误: {str(e)}")
         except:
             pass
             
@@ -698,7 +750,7 @@ if __name__ == "__main__":
     print(f"当前配置: NS_RANDOM={config.ns_random}, HEADLESS={config.headless}")
     if config.account_count == 0:
         print("未配置 Cookie，退出")
-        send_telegram_message("❌ <b>NodeSeek 自动任务失败</b>\n\n未配置 NS_COOKIE 环境变量")
+        send_enterprise_wechat_message("❌ NodeSeek 自动任务失败\n\n未配置 NS_COOKIE 环境变量")
         exit(1)
     
     print(f"检测到 {config.account_count} 个账号")
@@ -729,11 +781,11 @@ if __name__ == "__main__":
         # 单账号汇报
         r = all_results[0]
         if r["error"]:
-            report_message = f"""<b>NodeSeek 每日简报</b>
+            report_message = f"""NodeSeek 每日简报
 ━━━━━━━━━━━━━━━
-❌ <b>任务失败</b>
+❌ 任务失败
 ━━━━━━━━━━━━━━━
-⚠️ <b>错误</b>: {r["error"]}
+⚠️ 错误: {r["error"]}
 🕒 {beijing_time}"""
         else:
             if r["sign_in"] == "success":
@@ -746,31 +798,31 @@ if __name__ == "__main__":
                 sign_status = "❌ 失败"
                 sign_result = "签到失败"
                 
-            report_message = f"""<b>NodeSeek 每日简报</b>
+            report_message = f"""NodeSeek 每日简报
 ━━━━━━━━━━━━━━━
-👤 <b>账号</b>: 账号 1
-🏆 <b>奖励</b>: <b>{r["reward"]}</b> 🍗
-💬 <b>评论</b>: {r["comments"]} 条
+👤 账号: 账号 1
+🏆 奖励: {r["reward"]} 🍗
+💬 评论: {r["comments"]} 条
 ━━━━━━━━━━━━━━━
-{sign_status} <b>状态</b>: {sign_result}
+{sign_status} 状态: {sign_result}
 🕒 {beijing_time}"""
     else:
-        # 多账号汇报（极简科技风）
+        # 多账号汇报
         account_lines = []
         for i, r in enumerate(all_results):
             if r["error"]:
-                account_lines.append(f"\u274c \u8d26\u53f7{i+1}: {r['error']}")
+                account_lines.append(f"❌ 账号{i+1}: {r['error']}")
             else:
                 if r["sign_in"] in ("success", "already"):
-                    sign = f"\u2705 +{r['reward']}\ud83c\udf57"
+                    sign = f"✅ +{r['reward']}🍗"
                 else:
-                    sign = "\u274c"
-                account_lines.append(f"\ud83d\udc64 \u8d26\u53f7{i+1}: {sign} | \ud83d\udcac {r['comments']}\u6761")
+                    sign = "❌"
+                account_lines.append(f"👤 账号{i+1}: {sign} | 💬 {r['comments']}条")
         accounts_str = "\n".join(account_lines)
-        report_message = f"""<b>NodeSeek \u6bcf\u65e5\u7b80\u62a5</b>
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+        report_message = f"""NodeSeek 每日简报
+━━━━━━━━━━━━━━━
 {accounts_str}
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\ud83d\udd52 {beijing_time}"""
+━━━━━━━━━━━━━━━
+🕒 {beijing_time}"""
     
-    send_telegram_message(report_message)
+    send_enterprise_wechat_message(report_message)
